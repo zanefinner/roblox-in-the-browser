@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -16,7 +17,14 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-var clients = make(map[string]*websocket.Conn)
+// Client struct to store WebSocket connection and ID
+type Client struct {
+	ID     string
+	Conn   *websocket.Conn
+	Method string
+}
+
+var clients = make(map[string]*Client)
 var clientsMutex sync.Mutex
 
 func main() {
@@ -29,9 +37,18 @@ func main() {
 			return
 		}
 
+		// Generate a unique ID for the client
+		clientID := uuid.New().String()
+
+		// Create a Client struct with ID and WebSocket connection
+		client := &Client{
+			ID:   clientID,
+			Conn: conn,
+		}
+
 		// Lock the mutex before modifying the clients map
 		clientsMutex.Lock()
-		clients[conn.RemoteAddr().String()] = conn
+		clients[clientID] = client
 		clientsMutex.Unlock()
 
 		// Run forever
@@ -40,17 +57,17 @@ func main() {
 			if err != nil {
 				// Remove the connection from the clients map on error
 				clientsMutex.Lock()
-				delete(clients, conn.RemoteAddr().String())
+				delete(clients, clientID)
 				clientsMutex.Unlock()
 				return
 			}
 
-			fmt.Printf("%s send: %s\n", conn.RemoteAddr(), string(msg))
+			fmt.Printf("%s send: %s\n", clientID, string(msg))
 
 			// Lock the mutex before iterating over the clients map
 			clientsMutex.Lock()
-			for _, client := range clients {
-				if err = client.WriteMessage(msgType, msg); err != nil {
+			for _, otherClient := range clients {
+				if err = otherClient.Conn.WriteMessage(msgType, msg); err != nil {
 					// Handle error writing to client if needed
 				}
 			}
