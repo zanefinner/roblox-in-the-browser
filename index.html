@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div class="content">
+        <input type="text" id="input">
+        <button onclick="send()">send</button>
+    </div>
+    <div id="output"></div>
+    <script>
+        var input = document.getElementById('input');
+        var output = document.getElementById('output');
+        var sock = new WebSocket("ws://localhost:8000/echo")
+        sock.onopen =()=>{
+            output.innerHTML = "connected"
+        }
+        sock.onmessage =(e)=>{
+            output.innerHTML += "message : " + e.data + "<hr>"
+        }
+        function send(){
+            sock.send(input.value)
+            input.value = ""
+        }
+    </script>
+</body>
+</html>
